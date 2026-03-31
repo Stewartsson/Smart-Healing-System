@@ -1,0 +1,14 @@
+Hardware Wiring Instructions
+
+To build the Smart-Heal Bandage, all components are connected to the ESP32-C3 SuperMini microcontroller.
+
+For the temperature sensing circuit, wire one leg of the NTC thermistor directly to the 3.3V power pin of the ESP32-C3, and connect the other leg to the analog input pin GPIO 0 (A0). To complete the necessary voltage divider for the thermistor, attach a 10kΩ resistor from that exact same GPIO 0 pin and route it to the Ground (GND) pin.
+
+To simulate the analog pH sensor, use a standard 10k potentiometer. 
+Connect its left pin to Ground (GND), its right pin to the 3.3V power pin, and wire the middle wiper pin to the analog input pin GPIO 1 (A1).
+
+Next, set up the visual indicators and therapy actuators using three LEDs. 
+For the normal healing status, connect the positive (long) leg of the Green LED to digital pin GPIO 3. 
+For the infection alert, connect the positive leg of the Red LED to digital pin GPIO 4. 
+Finally, for the automated sterilization treatment, connect the positive leg of the Blue LED to digital pin GPIO 5.
+To protect the microcontroller, ensure the negative (short) leg of every single LED is connected to Ground (GND) through its own 220Ω current-limiting resistor.
