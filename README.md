@@ -5,11 +5,13 @@ Smart Healing system
 
 Awarded/Showcased at Tamizhan Skills Ideathon 2026 🏆
 
+
 📌 Project Overview
 
 Smart-Heal is an IoT-enabled "Theranostic" (Therapy + Diagnostic) smart bandage designed to prevent diabetic amputations. Traditional wound dressings are passive—they only cover the wound. Smart-Heal actively defends it.
 
 By continuously monitoring the wound's micro-climate and utilizing automated 405nm Blue Light Therapy, this system detects bacterial infections at their earliest stages and sterilizes the wound autonomously, eliminating the need for human intervention and preventing the spread of gangrene.
+
 
 ✨ Key Features
 
@@ -21,6 +23,7 @@ By continuously monitoring the wound's micro-climate and utilizing automated 405
 
 🚨 Smart Alerts: Visual onboard LED indicators (Safe/Critical) and push notifications for immediate medical attention.
 
+
 🛠️ Hardware & Tech Stack
 
 Microcontroller: ESP32-C3 SuperMini (Low power, compact footprint)
@@ -30,6 +33,7 @@ Sensors: NTC Thermistor (10kΩ), pH Sensor (Simulated via Potentiometer)
 Actuators: Diffused Blue LED (405nm Therapy simulation), Red/Green status LEDs
 
 Software: C++ (Arduino IDE), Blynk Simple ESP32, WiFi Multi
+
 
 🧠 How It Works
 
