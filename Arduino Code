@@ -1,0 +1,123 @@
+/*
+ * Project: Smart-Heal Theranostic Bandage
+ * Author: John Stewartsson Jr & Bio-Shield Innovators
+ * Board: ESP32-C3 SuperMini
+ * Description: Active IoT wound care system. Monitors temperature and pH to detect 
+ * infection early. Automatically triggers 405nm Blue Light Therapy 
+ * to sterilize the wound bed. Connects to Blynk IoT for remote monitoring.
+ */
+
+// --- BLYNK CLOUD CREDENTIALS ---
+// Replace these with your actual Blynk Template ID, Device Name, and Auth Token
+#define BLYNK_TEMPLATE_ID "TMPLxxxxxxxxx"      
+#define BLYNK_DEVICE_NAME "Smart Heal Bandage"    
+#define BLYNK_AUTH_TOKEN "Your_Blynk_Auth_Token"      
+
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <math.h>
+
+// --- WIFI CREDENTIALS ---
+char ssid[] = "YourWiFiName";
+char pass[] = "YourWiFiPassword";
+
+// --- PIN DEFINITIONS (ESP32-C3 SuperMini) ---
+#define PIN_TEMP 0   // Analog Pin A0 - NTC Thermistor
+#define PIN_PH   1   // Analog Pin A1 - pH Sensor (Simulated via Potentiometer)
+#define LED_G    3   // Digital Pin - Green LED (Safe/Normal Status)
+#define LED_R    4   // Digital Pin - Red LED (Infection Alert)
+#define LED_B    5   // Digital Pin - Blue LED (405nm Therapy Sterilization)
+
+// --- STEINHART-HART COEFFICIENTS (For 10k NTC Thermistor) ---
+const double VCC = 3.3; 
+const double R_DIV = 10000.0; // 10k resistor used in voltage divider
+const double A = 0.001129148; 
+const double B = 0.000234125; 
+const double C = 0.0000000876741;
+
+BlynkTimer timer;
+bool manualOverride = false; // Allows doctors to trigger therapy remotely
+
+void setup() {
+  // Initialize Serial Monitor for debugging
+  Serial.begin(115200);
+  
+  // Configure Output Pins (LEDs)
+  pinMode(LED_G, OUTPUT); 
+  pinMode(LED_R, OUTPUT); 
+  pinMode(LED_B, OUTPUT);
+  
+  // Configure Input Pins (Sensors)
+  pinMode(PIN_TEMP, INPUT); 
+  pinMode(PIN_PH, INPUT);
+
+  // Initialize Blynk connection
+  Serial.println("Connecting to WiFi and Blynk...");
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+  
+  // Set Timer to run the core logic every 1000ms (1 second)
+  timer.setInterval(1000L, runSmartHealLogic);
+}
+
+// --- BLYNK APP INTERACTION ---
+// Virtual Pin V5 connected to a Button widget in Blynk (Doctor's Manual Override)
+BLYNK_WRITE(V5) {
+  if (param.asInt() == 1) {
+    manualOverride = true;
+    Serial.println("Doctor initiated manual therapy override.");
+  } else {
+    manualOverride = false;
+    Serial.println("Manual therapy override deactivated.");
+  }
+}
+
+// --- CORE THERANOSTIC LOGIC ---
+void runSmartHealLogic() {
+  // 1. READ TEMPERATURE (Calculate Celsius from NTC Thermistor)
+  int rawTemp = analogRead(PIN_TEMP);
+  double Vout = (rawTemp * VCC) / 4095.0; // ESP32 has 12-bit ADC (0-4095)
+  double R_NTC = (VCC * R_DIV / Vout) - R_DIV;
+  double logR = log(R_NTC);
+  double tempC = (1.0 / (A + B * logR + C * logR * logR * logR)) - 273.15;
+
+  // 2. READ pH (Simulated via Potentiometer mapping)
+  int rawPH = analogRead(PIN_PH);
+  // Map 12-bit ADC (0-4095) to a realistic wound pH scale (5.0 to 9.0)
+  double phVal = (rawPH * 3.3 / 4095.0) * 1.21 + 5.0; 
+
+  // 3. CLINICAL INFECTION LOGIC
+  // A healthy wound is slightly acidic and normal body temp.
+  // Infection is indicated by rising alkalinity (pH > 8.0) or localized fever (Temp > 37.5°C).
+  bool infectionDetected = (tempC > 37.5 || phVal > 8.0);
+  
+  // 4. ACTIVATE TREATMENT OR MAINTAIN SAFE MODE
+  if (infectionDetected || manualOverride) {
+    // === CRITICAL MODE: INFECTION DETECTED ===
+    digitalWrite(LED_R, HIGH);   // Visual Alert ON
+    digitalWrite(LED_G, LOW);    // Safe Light OFF
+    digitalWrite(LED_B, HIGH);   // THERAPY ACTIVATED (Blue Light Sterilization)
+    
+    Blynk.virtualWrite(V2, "CRITICAL: Therapy Active"); // Update App Status (Virtual Pin 2)
+  } else {
+    // === SAFE MODE: NORMAL HEALING ===
+    digitalWrite(LED_R, LOW);    // Alert OFF
+    digitalWrite(LED_G, HIGH);   // Safe Light ON
+    digitalWrite(LED_B, LOW);    // Therapy OFF
+    
+    Blynk.virtualWrite(V2, "Healing Normal"); // Update App Status (Virtual Pin 2)
+  }
+
+  // 5. TRANSMIT TELEMETRY TO DOCTOR/DASHBOARD
+  Blynk.virtualWrite(V0, tempC); // Send Temperature to Virtual Pin 0
+  Blynk.virtualWrite(V1, phVal); // Send pH to Virtual Pin 1
+  
+  // Debug output
+  Serial.printf("Status -> Temp: %.2f C | pH: %.2f\n", tempC, phVal);
+}
+
+void loop() {
+  // Keep the Blynk connection and Timer running seamlessly
+  Blynk.run();
+  timer.run();
+}
